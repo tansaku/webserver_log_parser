@@ -9,9 +9,9 @@ end
 
 RSpec::Core::RakeTask.new(:spec)
 
-# desc "test performance of algorithm against ruby default implementation"
-# task :performance do
-#   require "./performance"
-# end
+desc 'test performance of algorithm against ruby default implementation'
+task :performance do
+  require './performance'
+end
 
 task default: %i[rubocop spec]
