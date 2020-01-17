@@ -37,6 +37,10 @@ etc...
 
 ## TODO
 
-* [ ] unique visits
-* [ ] test coverage
+* [x] unique visits
+* [x] test coverage
 * [ ] command line calling
+  - [x] need to pull filename from args
+  - [ ] error handling
+  - [ ] help messages
+  - [ ] use a command line helper? 
