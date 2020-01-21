@@ -4,7 +4,9 @@ source 'https://rubygems.org'
 
 ruby '2.6.5'
 
+gem 'commander'
 gem 'rake'
+gem 'terminal-table'
 
 group :test do
   gem 'pry-byebug'
