@@ -8,7 +8,8 @@ LOGGER.level = Logger::WARN
 require_relative 'pluralize'
 require_relative 'web_page_visits'
 
-SEPARATOR = ' '
+SPACE_SEPARATOR = ' '
+TAB_SEPARATOR = "\t"
 
 # calculates most page views and unique visits for a webserver log
 class WebserverLogParser
@@ -26,11 +27,8 @@ class WebserverLogParser
 
   private
 
-  attr_reader :visits
-
   def initialize(filename)
     @index = parse_file(filename)
-    @visits = visits_map
   end
 
   def parse_file(filename)
@@ -40,16 +38,28 @@ class WebserverLogParser
   end
 
   def parse_line(line, index)
-    raise 'no space character' unless line.include?(SEPARATOR)
+    raise 'no space characters or tabs' unless separator_type(line)
 
-    page, ip = line.split(SEPARATOR)
-    index[page] ? index[page] << ip : index[page] = [ip]
+    page, ip = line.split(separator_type(line))
+
+    if index[page]
+      index[page].add(ip)
+    else
+      index[page] = WebPageVisits.new(page, [ip])
+    end
   rescue StandardError => e
     LOGGER.warn("Unable to parse line: #{line}")
     LOGGER.warn(e)
   end
 
-  def visits_map
-    @index.map { |page, ips| WebPageVisits.new(page, ips) }
+  def visits
+    @visits ||= @index.values
+  end
+
+  def separator_type(line)
+    return TAB_SEPARATOR if line.include?(TAB_SEPARATOR)
+    return SPACE_SEPARATOR if line.include?(SPACE_SEPARATOR)
+
+    nil
   end
 end

@@ -3,7 +3,7 @@ Webserver Log Parser
 
 Webserver Log Parser is a ruby script that:
 
-1) Receives a log as argument e.g.: 
+1) Receives a log file as argument e.g.: 
 
 ```
 ./parser.rb webserver.log
@@ -62,30 +62,31 @@ $ bundle
 $  ./parser.rb webserver.log
 processing 'webserver.log' ...
 
-+--------------+--------+
-|    Most Page Views    |
-+--------------+--------+
-| Page         | Visits |
-+--------------+--------+
-| /about/2     | 90     |
-| /contact     | 89     |
-| /index       | 82     |
-| /about       | 81     |
-| /help_page/1 | 80     |
-| /home        | 78     |
-+--------------+--------+
-+--------------+--------+
-|    Most Page Views    |
-+--------------+--------+
-| Page         | Visits |
-+--------------+--------+
-| /index       | 23     |
-| /home        | 23     |
-| /contact     | 23     |
-| /help_page/1 | 23     |
-| /about/2     | 22     |
-| /about       | 21     |
-+--------------+--------+
++--------------+-----------+
+|     Most page views      |
++--------------+-----------+
+| Page         | Visits    |
++--------------+-----------+
+| /about/2     | 90 visits |
+| /contact     | 89 visits |
+| /index       | 82 visits |
+| /about       | 81 visits |
+| /help_page/1 | 80 visits |
+| /home        | 78 visits |
++--------------+-----------+
+
++--------------+-----------+
+|  Most unique page views  |
++--------------+-----------+
+| Page         | Visits    |
++--------------+-----------+
+| /index       | 23 visits |
+| /home        | 23 visits |
+| /contact     | 23 visits |
+| /help_page/1 | 23 visits |
+| /about/2     | 22 visits |
+| /about       | 21 visits |
++--------------+-----------+
 ```
 ## Tests
 
@@ -114,6 +115,8 @@ WebPageVisits
   should sort by number of ips by default
   should present itself clearly
   should present unique visits clearly
+  can have different ips added over time
+  can have the same ips added over time
   rejects to_s arg other than number or unique_number features
 
 WebserverLogParser
@@ -132,18 +135,18 @@ WebserverLogParser
     behaves like multiple entry log parser
       returns correct results for multiple log entries
 
-Finished in 0.02267 seconds (files took 0.2259 seconds to load)
-12 examples, 0 failures
+Finished in 0.02274 seconds (files took 0.22574 seconds to load)
+14 examples, 0 failures
 
 
-COVERAGE: 100.00% -- 48/48 lines in 3 files
+COVERAGE: 100.00% -- 58/58 lines in 3 files
 ```
 
 ## Approach
 
-Uses a `WebPageVisits` class to represent the collection of visits to a particular page.  The WebPageVisits class stores the number of visits and unique visits (calculating unique visits by taking the length of a Set version of the array of ips).  By default it sorts on overall number of visits, and provides a parameterized `to_s` method to allow a pretty print output of either the total or unique number of visits to a given a page. This relies on a `Pluralize` class to correctly format "visit" vs "visits" although the `to_s` method is no longer used with the table formatted output.
+This Webserver Log Parser uses a `WebPageVisits` class to represent the collection of visits to a particular page.  The WebPageVisits class stores the number of visits and unique visits (calculating unique visits by taking the length of a Set version of the array of ips).  By default it sorts on overall number of visits, and provides a parameterized `to_s` method to allow a pretty print output of either the total or unique number of visits to a given page. This relies on a `Pluralize` class to correctly format "visit" vs "visits" although the `to_s` method is no longer used with the table formatted output.
 
-The main class is `WebserverLogParser` which by default will parse a file called `webserver.log` that is assumed to be on the root of the project, although the file parsed can be adjusted by specificing the filename argument to the `parse` class method.  The file is broken up using `readlines` and an index formed using a hash to store an array of the ips associated with a single page, keyed against the page name as a string. The index is automatically coverted into a an array of `WebPageVisits` objects, which can then be sorted by total number or unique number of visits, and reversed to ensure the most visited comes first in the array. 
+The main class is `WebserverLogParser` which by default will parse a file called `webserver.log` that is assumed to be on the root of the project, although the file parsed can be adjusted by specificing the filename argument to the `parse` class method.  The file is broken up using `readlines` and an index formed using a hash to store  `WebPageVisits` objects that contain the ip visits for each page, keyed against the page name. The index values are then converted to an array of `WebPageVisits` objects, which can then be sorted by total number or unique number of visits, and reversed to ensure the most visited comes first in the array. 
 
 A `parser.rb` file can be run from the command line and uses [Commander](https://github.com/commander-rb/commander) for command line processing and management and [Terminal Table](https://github.com/tj/terminal-table) to format the results nicely on the terminal.
 
@@ -151,7 +154,7 @@ A `parser.rb` file can be run from the command line and uses [Commander](https:/
 
 ### Different approach to RSpec organisation?
 
-The RSpec block for `WebserverLogParser` fell foul of an Rubocop block size issue.  Shared example extraction was not sufficient to remove this issue, and so the advice from the following stackoverflow post was followed to turn off that rule for RSpec blocks:
+The RSpec block for `WebserverLogParser` fell foul of an Rubocop block size issue.  Shared example extraction was not sufficient to remove this issue, and so the advice from the following StackOverflow post was followed to turn off that rule for RSpec blocks:
 
 https://stackoverflow.com/questions/40934345/rubocop-25-line-block-size-and-rspec-tests
 
@@ -163,6 +166,8 @@ It might make sense to add an additional class to represent the `WebserverLog` s
 
 ### Performance?
 
+The system might have to cope with very long webserver logs and the approach taken has not been extensively optimised for either time or space performance.  The focus was on getting something that would work robustly.  Performance improvements would come from a different structure. Perhaps only Set-ting the ip array when unique page views were requested, and/or adjusting the data structures used to manage the data as it accumulates.  At least for the current code the visits map is created once and then sorting is performed on that.  The results of the sorting could be memoized, but that feels like premature optimization in the absence of specific performance requirements.
+
 No performance requirements were specified, but a performance assessment framework has been added and can be executed as follows:
 
 ```
@@ -172,16 +177,125 @@ page views:  2.649054   0.102504   2.751558 (  2.759408)
 unique:   2.668389   0.095945   2.764334 (  2.770790)
 ```
 
-to compare the performance of calculating total and unique page views. The system might have to cope with very long webserver logs and the approach taken is not particularly performant.  The focus has been on getting something working.  Performance improvements would come from a different structure. Perhaps only Set-ting the ip array when unique page views were requested, and/or adjusting the data structures used to manage the data as it accumulates.  At least for the current code the visits map is created once and then sorting performed on that.  The results of the sorting could be memoized, but that feels like premature optimization in the absence of specific performance requirements.
+to compare the performance of calculating total and unique page views. The results shown above are for the first version of the system.   An alternative approach involving restructuring `webserver_log_parser` to create the WebPageVisits object as the log was processed was tried where the `parse_line` operation was as follows:
+
+```rb
+  if index[page]
+    index[page].add(ip)
+  else
+    index[page] = WebPageVisits.new(page, [ip])
+  end
+```
+
+This gave the following results:
+
+```
+page views:  2.207392   0.092413   2.299805 (  2.302135)
+unique:   2.740700   0.096164   2.836864 (  2.840105)
+```
+
+This improved the speed with which we could generate the page views, and repeated runs suggest that the slight deterioration of the unique views was within the range of natural variation between performance assessment runs.
 
 ### Acceptance Tests?
 
 Currently there is a fair bit of code in `parser.rb` that is not covered by any tests.  With more time it might make sense to add an acceptance test to cover this code, and it's behaviour.
 
-### Log Formatting Requirements?
-
-We are currently assuming a single space separating the path and ip address and no other spaces, and skip log entries that don't meet these requirements, while logging the issue.  It's unclear if this would be the preferred approach from the current specifications.
-
 ### Use of `send` in `parser.rb`
 
-In order to mimimize method length in `parser.rb` the `send` method is used as part of a generic `output_table` method which is perhaps not ideal.  Might be better to pass a block rather then using `send` which can access private methods ... 
+In order to mimimize method length in `parser.rb` the `send` method is used as part of a generic `output_table` method which is perhaps not ideal.  It might be better to pass a block rather then using `send` which could access private methods ... 
+
+### Log Formatting Requirements?
+
+The first version of the code assumed a single space separating the path and ip address and no other spaces, and skiped log entries that did't meet these requirements, while logging the issue.  This did not work well with more realistic data which had tabs and/or multiple whitespaces.  The code was adjusted to allow this data to be handled as follows in `lib/webserver_log_parser.rb`:
+
+```rb
+SEPARATOR = /\t+|\s+/.freeze
+
+...
+
+  raise 'no space characters or tabs' unless line.match?(SEPARATOR)
+```
+
+However this caused a performance deterioration as we shall see in the section below. 
+
+### More Realistic Data
+
+Some more realistic log data was obtained from https://www.kaggle.com/shawon10/web-log-dataset and is included in the repo - the results of operating on the more realistic log data are as follows:
+
+```
+$ ./parser.rb fixtures/kaggle.txt 
+processing 'fixtures/kaggle.txt' ...
+
+displaying up to top 10 in each category
+
++-----------------------------------------------------------------+-------------+
+|                                Most page views                                |
++-----------------------------------------------------------------+-------------+
+| Page                                                            | Visits      |
++-----------------------------------------------------------------+-------------+
+| /login.php                                                      | 3294 visits |
+| /home.php                                                       | 2649 visits |
+| /js/vendor/modernizr-2.8.3.min.js                               | 1417 visits |
+| /                                                               | 862 visits  |
+| /contestproblem.php?name=RUET%20OJ%20Server%20Testing%20Contest | 467 visits  |
+| /css/normalize.css                                              | 408 visits  |
+| /css/bootstrap.min.css                                          | 404 visits  |
+| /css/font-awesome.min.css                                       | 399 visits  |
+| /css/style.css                                                  | 395 visits  |
+| /css/main.css                                                   | 394 visits  |
+| /js/vendor/jquery-1.12.0.min.js                                 | 387 visits  |
++-----------------------------------------------------------------+-------------+
+
++-----------------------------------+----------+
+|            Most unique page views            |
++-----------------------------------+----------+
+| Page                              | Visits   |
++-----------------------------------+----------+
+| /pcompile.php                     | 6 visits |
+| /action.php                       | 6 visits |
+| /login.php                        | 6 visits |
+| /logout.php                       | 6 visits |
+| /contestsubmission.php            | 6 visits |
+| /                                 | 6 visits |
+| /process.php                      | 6 visits |
+| /js/vendor/modernizr-2.8.3.min.js | 6 visits |
+| /home.php                         | 6 visits |
+| /archive.php                      | 6 visits |
+| /compile.php                      | 6 visits |
++-----------------------------------+----------+
+
+```
+
+Unfortunately the introduction of regex matching in the main parsing loop led to a significant deterioration in performance:
+
+```
+              user     system      total        real
+page views:  7.194163   0.323039   7.517202 (  7.537447)
+unique:   7.854744   0.347131   8.201875 (  8.243495)
+```
+
+The performance was returned to roughly previous levels by replacing the more complex regex with a simpler check for inclusion of individual tabs and spaces:
+
+```rb
+    raise 'no space characters or tabs' unless separator_type(line)
+
+    page, ip = line.split(separator_type(line))
+
+  ...
+
+  def separator_type(line)
+    return TAB_SEPARATOR if line.include?(TAB_SEPARATOR)
+    return SPACE_SEPARATOR if line.include?(SPACE_SEPARATOR)
+
+    nil
+  end
+```
+
+```
+$ bundle exec rake performance
+              user     system      total        real
+page views:  2.817147   0.094838   2.911985 (  2.914998)
+unique:   3.363575   0.104883   3.468458 (  3.472971)
+```
+
+Thus validating the utility of the performance system.

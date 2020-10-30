@@ -24,17 +24,24 @@ end
 def output(filename)
   puts "processing '#{filename}' ..."
   puts
+  puts 'displaying up to top 10 in each category'
+  puts
   puts output_table(filename, :most_page_views, :number)
+  puts
   puts output_table(filename, :most_unique_page_views, :unique_number)
 end
 
 def output_table(filename, view_method, number_method)
-  rows = WebserverLogParser.parse(filename).send(view_method).map do |visit|
+  rows = parsed_data(filename).send(view_method).map do |visit|
     [visit.page, Pluralize.format(visit.send(number_method), 'visit')]
   end
   Terminal::Table.new(
-    title: 'Most Page Views',
+    title: view_method.to_s.capitalize.gsub(/_/, ' '),
     headings: %w[Page Visits],
-    rows: rows
+    rows: rows[0..10]
   )
+end
+
+def parsed_data(filename)
+  @parsed_data ||= WebserverLogParser.parse(filename)
 end
