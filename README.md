@@ -100,11 +100,19 @@ which should produce output like the following:
 
 ```
 Running RuboCop...
-Inspecting 12 files
-............
+Inspecting 14 files
+..............
 
-12 files inspected, no offenses detected
+14 files inspected, no offenses detected
 /Users/tansaku/.rvm/rubies/ruby-2.6.5/bin/ruby -I/Users/tansaku/.rvm/gems/ruby-2.6.5/gems/rspec-core-3.9.1/lib:/Users/tansaku/.rvm/gems/ruby-2.6.5/gems/rspec-support-3.9.2/lib /Users/tansaku/.rvm/gems/ruby-2.6.5/gems/rspec-core-3.9.1/exe/rspec --pattern spec/\*\*\{,/\*/\*\*\}/\*_spec.rb
+
+LineParser
+  lines with tabs
+    parses successfully
+  lines with spaces
+    parses successfully
+  lines without spaces or tabs
+    log an error and add nothing to the index
 
 Pluralize
   correctly presents singular form
@@ -135,11 +143,10 @@ WebserverLogParser
     behaves like multiple entry log parser
       returns correct results for multiple log entries
 
-Finished in 0.02274 seconds (files took 0.22574 seconds to load)
-14 examples, 0 failures
+Finished in 0.01864 seconds (files took 0.18533 seconds to load)
+17 examples, 0 failures
 
-
-COVERAGE: 100.00% -- 58/58 lines in 3 files
+Coverage report generated for RSpec to /Users/tansaku/Documents/GitHub/tansaku/webserver_log_parser/coverage. 68 / 68 LOC (100.0%) covered.
 ```
 
 ## Approach
@@ -162,7 +169,9 @@ The extraction of the shared examples is still in place, but is maybe too convol
 
 ### WebserverLog Class?
 
-It might make sense to add an additional class to represent the `WebserverLog` separately but probably premature refactoring given the current level of complexity and specified requirements.
+It might make sense to add an additional class to represent the `WebserverLog` separately but probably premature refactoring given the current level of complexity and specified requirements.  Earlier versions of the  `WebserverLogParser` could be considered to be doing too much in terms of reading the file, and splitting the lines and constructing the main data structure.  Although a counter argument would be that the `WebServerLogParser` class was way below the 100 line limit that Sandi Metz suggests to be the maximum suggested class size.
+
+The danger with too many small classes is that it becomes difficult to follow the flow of execution.  However with good tests and test coverage it is trivial to extract private methods such as the `parse_line` method in the `WebServerLogParser` into a `LineParser` class with "single" responsibility for line parsing.  This does require it to have a reference to the larger data structure it needs to keep track of the aggregate information, which is maybe hinting at the need for another class.  The extraction of the `parse_line` private method to a LineParser method has been included, although this has led to a slight drop in performance; it's trade offs all the way.
 
 ### Performance?
 
@@ -195,6 +204,10 @@ unique:   2.740700   0.096164   2.836864 (  2.840105)
 ```
 
 This improved the speed with which we could generate the page views, and repeated runs suggest that the slight deterioration of the unique views was within the range of natural variation between performance assessment runs.
+
+### Memory
+
+One might argue that we don't need to store all the ip addresses individually, but at the moment the performance is not too shabby, and future requirements might involve doing more with the details of the specific ip addresses.  It would be a trivial exercise to adjust the system to simply count the ips rather than storing each and every one, but in the absence of concrete performance requiremenst or suggested future development plans it's unclear that there's any benefit to trying to carefully conserve the memory space taken up by processsing the log file.  This can easily be done if necessary.
 
 ### Acceptance Tests?
 
