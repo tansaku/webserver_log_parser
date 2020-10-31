@@ -8,6 +8,10 @@ gem 'commander'
 gem 'rake'
 gem 'terminal-table'
 
+group :development do
+  gem 'memory_profiler'
+end
+
 group :test do
   gem 'pry-byebug'
   gem 'rspec'

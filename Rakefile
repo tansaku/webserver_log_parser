@@ -9,9 +9,14 @@ end
 
 RSpec::Core::RakeTask.new(:spec)
 
-desc 'test performance of algorithm against ruby default implementation'
+desc 'test performance of straight page views vs unique page views'
 task :performance do
   require './performance'
+end
+
+desc 'test memory performance'
+task :performance_memory do
+  require './performance_memory'
 end
 
 task default: %i[rubocop spec]

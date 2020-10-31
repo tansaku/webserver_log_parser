@@ -153,7 +153,7 @@ Coverage report generated for RSpec to /Users/tansaku/Documents/GitHub/tansaku/w
 
 This Webserver Log Parser uses a `WebPageVisits` class to represent the collection of visits to a particular page.  The WebPageVisits class stores the number of visits and unique visits (calculating unique visits by taking the length of a Set version of the array of ips).  By default it sorts on overall number of visits, and provides a parameterized `to_s` method to allow a pretty print output of either the total or unique number of visits to a given page. This relies on a `Pluralize` class to correctly format "visit" vs "visits" although the `to_s` method is no longer used with the table formatted output.
 
-The main class is `WebserverLogParser` which by default will parse a file called `webserver.log` that is assumed to be on the root of the project, although the file parsed can be adjusted by specificing the filename argument to the `parse` class method.  The file is broken up using `readlines` and an index formed using a hash to store  `WebPageVisits` objects that contain the ip visits for each page, keyed against the page name. The index values are then converted to an array of `WebPageVisits` objects, which can then be sorted by total number or unique number of visits, and reversed to ensure the most visited comes first in the array. 
+The main class is `WebserverLogParser` which by default will parse a file called `webserver.log` that is assumed to be on the root of the project, although the file parsed can be adjusted by specificing the filename argument to the `parse` class method.  The file is broken up using `readlines` and an index formed using a hash to store  `WebPageVisits` objects that contain the ip visits for each page, keyed against the page name. A `LineParser` class is used to manage the process of splitting the individual lines and creating or updating the `WebPageVisits` objects. The index values are then converted to an array of `WebPageVisits` objects, which can then be sorted by total number or unique number of visits, and reversed to ensure the most visited comes first in the array. 
 
 A `parser.rb` file can be run from the command line and uses [Commander](https://github.com/commander-rb/commander) for command line processing and management and [Terminal Table](https://github.com/tj/terminal-table) to format the results nicely on the terminal.
 
@@ -171,13 +171,13 @@ The extraction of the shared examples is still in place, but is maybe too convol
 
 It might make sense to add an additional class to represent the `WebserverLog` separately but probably premature refactoring given the current level of complexity and specified requirements.  Earlier versions of the  `WebserverLogParser` could be considered to be doing too much in terms of reading the file, and splitting the lines and constructing the main data structure.  Although a counter argument would be that the `WebServerLogParser` class was way below the 100 line limit that Sandi Metz suggests to be the maximum suggested class size.
 
-The danger with too many small classes is that it becomes difficult to follow the flow of execution.  However with good tests and test coverage it is trivial to extract private methods such as the `parse_line` method in the `WebServerLogParser` into a `LineParser` class with "single" responsibility for line parsing.  This does require it to have a reference to the larger data structure it needs to keep track of the aggregate information, which is maybe hinting at the need for another class.  The extraction of the `parse_line` private method to a LineParser method has been included, although this has led to a slight drop in performance; it's trade offs all the way.
+The danger with too many small classes is that it becomes difficult to follow the flow of execution.  However with good tests and test coverage it was straightforward to extract private methods such as the `parse_line` method in the `WebServerLogParser` into a `LineParser` class with "single" responsibility for line parsing.  This does require it to have a reference to the larger data structure it needs to keep track of the aggregate information, which is maybe hinting at the need for another class.  The extraction of the `parse_line` private method to a LineParser method has been included, although this has led to a slight drop in speed performance; it's trade offs all the way.
 
-### Performance?
+### Performance (Speed)?
 
-The system might have to cope with very long webserver logs and the approach taken has not been extensively optimised for either time or space performance.  The focus was on getting something that would work robustly.  Performance improvements would come from a different structure. Perhaps only Set-ting the ip array when unique page views were requested, and/or adjusting the data structures used to manage the data as it accumulates.  At least for the current code the visits map is created once and then sorting is performed on that.  The results of the sorting could be memoized, but that feels like premature optimization in the absence of specific performance requirements.
+The system might have to cope with very long webserver logs and the approach taken has not been extensively optimised for either time (speed) or space (memory) performance.  The focus was on getting something that would work robustly.  Performance improvements could come from different data structures used to manage the data as it accumulates.  At least for the current code the visits map is created once and then sorting is performed on that.  The results of the sorting could be memoized, but that feels like premature optimization in the absence of specific performance requirements.
 
-No performance requirements were specified, but a performance assessment framework has been added and can be executed as follows:
+No performance requirements were specified, but a speed performance assessment framework has been added and can be executed as follows:
 
 ```
 $ bundle exec rake performance
@@ -186,7 +186,7 @@ page views:  2.649054   0.102504   2.751558 (  2.759408)
 unique:   2.668389   0.095945   2.764334 (  2.770790)
 ```
 
-to compare the performance of calculating total and unique page views. The results shown above are for the first version of the system.   An alternative approach involving restructuring `webserver_log_parser` to create the WebPageVisits object as the log was processed was tried where the `parse_line` operation was as follows:
+to compare the performance of calculating total and unique page views. The results shown above are for the first version of the system.   An alternative approach involving restructuring `webserver_log_parser` to create the WebPageVisits object as the log was processed was tried where the `parse_line` operation was adjusted to the following:
 
 ```rb
   if index[page]
@@ -196,18 +196,63 @@ to compare the performance of calculating total and unique page views. The resul
   end
 ```
 
-This gave the following results:
+rather than 
+
+```rb
+  if index[page]
+    index[page] << ip
+  else
+    index[page] = [ip]
+  end
+```
+
+Creating the WebPageVisits object inside the main loop gave the following results:
 
 ```
 page views:  2.207392   0.092413   2.299805 (  2.302135)
 unique:   2.740700   0.096164   2.836864 (  2.840105)
 ```
 
-This improved the speed with which we could generate the page views, and repeated runs suggest that the slight deterioration of the unique views was within the range of natural variation between performance assessment runs.
+showing improvement in the speed with which we could generate the page views. Repeated runs suggest that the slight deterioration of the unique views was within the range of natural variation between performance assessment runs.
 
-### Memory
+### Performance (Memory)?
 
-One might argue that we don't need to store all the ip addresses individually, but at the moment the performance is not too shabby, and future requirements might involve doing more with the details of the specific ip addresses.  It would be a trivial exercise to adjust the system to simply count the ips rather than storing each and every one, but in the absence of concrete performance requiremenst or suggested future development plans it's unclear that there's any benefit to trying to carefully conserve the memory space taken up by processsing the log file.  This can easily be done if necessary.
+One might be concerned about the amount of memory being taken up by the implementation but memory profiling is straightforward using this gem:
+
+https://github.com/SamSaffron/memory_profiler
+
+which is integrated into the current system and can be used to assess the memory requirements of calculating the page views like so:
+
+```
+$ bundle exec rake performance_memory
+```
+
+The output is extensive but here are some highlights from the current implementation:
+
+```
+allocated memory by class
+-----------------------------------
+     65434  String
+     36008  LineParser
+     30592  Array
+      8424  File
+       440  WebPageVisits
+       232  Hash
+        40  WebserverLogParser
+
+
+allocated objects by class
+-----------------------------------
+      1506  String
+       511  Array
+       500  LineParser
+         6  WebPageVisits
+         1  File
+         1  Hash
+         1  WebserverLogParser        
+```
+
+Should memory be constrained it is a straightforward matter to compare alternate implementations in terms of their memory usage.  There is no need to instantiate as many objects as the current implementation does, but there's a trade off between code maintainabilty/readability and optimizing for one kind of performance or another.  In the absence of specific requirements it makes sense to leave the code in a more readable/maintainable state, rather than using lots of class methods to avoid instantiating extra objects, such as the LineParser. 
 
 ### Acceptance Tests?
 
@@ -311,4 +356,4 @@ page views:  2.817147   0.094838   2.911985 (  2.914998)
 unique:   3.363575   0.104883   3.468458 (  3.472971)
 ```
 
-Thus validating the utility of the performance system.
+Thus demonstrating how we can improve the code by a data driven approach that provides specific evidence for the pros and cons of any particular change.
