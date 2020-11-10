@@ -2,7 +2,7 @@
 
 require 'logger'
 
-LOGGER = Logger.new(STDOUT)
+LOGGER = Logger.new($stdout)
 LOGGER.level = Logger::WARN
 
 require_relative 'line_parser'
