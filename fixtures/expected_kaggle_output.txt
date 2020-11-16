@@ -1,0 +1,39 @@
+processing 'fixtures/kaggle.txt' ...
+
+displaying up to top 10 in each category
+
++-----------------------------------------------------------------+-------------+
+|                                Most page views                                |
++-----------------------------------------------------------------+-------------+
+| Page                                                            | Visits      |
++-----------------------------------------------------------------+-------------+
+| /login.php                                                      | 3287 visits |
+| /home.php                                                       | 2642 visits |
+| /js/vendor/modernizr-2.8.3.min.js                               | 1415 visits |
+| /                                                               | 861 visits  |
+| /contestproblem.php?name=RUET%20OJ%20Server%20Testing%20Contest | 467 visits  |
+| /css/normalize.css                                              | 408 visits  |
+| /css/bootstrap.min.css                                          | 404 visits  |
+| /css/font-awesome.min.css                                       | 399 visits  |
+| /css/style.css                                                  | 395 visits  |
+| /css/main.css                                                   | 394 visits  |
+| /js/vendor/jquery-1.12.0.min.js                                 | 387 visits  |
++-----------------------------------------------------------------+-------------+
+
++--------------------------------------------------------------+----------+
+|                         Most unique page views                          |
++--------------------------------------------------------------+----------+
+| Page                                                         | Visits   |
++--------------------------------------------------------------+----------+
+| /login.php?value=fail                                        | 5 visits |
+| /contestsubmission.php?id=16                                 | 5 visits |
+| /countdown.php?name=RUET%20OJ%20Server%20Testing%20Contest   | 5 visits |
+| /details.php?id=44                                           | 5 visits |
+| /compiler.php                                                | 5 visits |
+| /allsubmission.php?page=2                                    | 5 visits |
+| /contest.php                                                 | 5 visits |
+| /details.php?id=46                                           | 5 visits |
+| /details.php?id=42                                           | 5 visits |
+| /details.php?id=45                                           | 5 visits |
+| /contestproblem.php?name=RUET%20OJ%20TLE%20Testing%20Contest | 5 visits |
++--------------------------------------------------------------+----------+

@@ -4,7 +4,7 @@ require 'memory_profiler'
 require './lib/webserver_log_parser'
 
 def page_views
-  WebserverLogParser.parse.most_page_views
+  WebserverLogParser.new.visits.sort.reverse
 end
 
 report = MemoryProfiler.report do

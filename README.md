@@ -39,7 +39,7 @@ etc...
 
 The code is written and tested against:
 
-* [Ruby](https://www.ruby-lang.org/) 2.6.5
+* [Ruby](https://www.ruby-lang.org/) 2.7.2
 
 ## Installation
 
@@ -61,6 +61,8 @@ $ bundle
 ```sh
 $  ./parser.rb webserver.log
 processing 'webserver.log' ...
+
+displaying up to top 10 in each category
 
 +--------------+-----------+
 |     Most page views      |
@@ -100,11 +102,16 @@ which should produce output like the following:
 
 ```
 Running RuboCop...
-Inspecting 14 files
-..............
+Inspecting 16 files
+................
 
-14 files inspected, no offenses detected
-/Users/tansaku/.rvm/rubies/ruby-2.6.5/bin/ruby -I/Users/tansaku/.rvm/gems/ruby-2.6.5/gems/rspec-core-3.9.1/lib:/Users/tansaku/.rvm/gems/ruby-2.6.5/gems/rspec-support-3.9.2/lib /Users/tansaku/.rvm/gems/ruby-2.6.5/gems/rspec-core-3.9.1/exe/rspec --pattern spec/\*\*\{,/\*/\*\*\}/\*_spec.rb
+16 files inspected, no offenses detected
+/Users/tansaku/.rvm/rubies/ruby-2.7.2/bin/ruby -I/Users/tansaku/.rvm/gems/ruby-2.7.2/gems/rspec-core-3.10.0/lib:/Users/tansaku/.rvm/gems/ruby-2.7.2/gems/rspec-support-3.10.0/lib /Users/tansaku/.rvm/gems/ruby-2.7.2/gems/rspec-core-3.10.0/exe/rspec --pattern spec/\*\*\{,/\*/\*\*\}/\*_spec.rb
+
+Full System
+  processes file to produce correct output
+  bigger more realistic file
+    processes file to produce correct output
 
 LineParser
   lines with tabs
@@ -112,12 +119,7 @@ LineParser
   lines with spaces
     parses successfully
   lines without spaces or tabs
-    log an error and add nothing to the index
-
-Pluralize
-  correctly presents singular form
-  correctly presents default plural form
-  correctly presents plural form for exceptions
+    logs an error and adds nothing to the index
 
 WebPageVisits
   should sort by number of ips by default
@@ -129,55 +131,46 @@ WebPageVisits
 
 WebserverLogParser
   single log entry
-    behaves like single entry log parser
-      returns correct results for multiple log entries
+    has one visit
   double log entry
-    behaves like multiple entry log parser
-      returns correct results for multiple log entries
-  triple log entry
-    behaves like multiple entry log parser
-      returns correct results for multiple log entries
-    behaves like multiple entry log parser
-      returns correct results for multiple log entries
+    has two visits
+  triple log entry with duplication
+    has two visits
   bad log entry
-    behaves like multiple entry log parser
-      returns correct results for multiple log entries
+    is ignored
 
-Finished in 0.01864 seconds (files took 0.18533 seconds to load)
-17 examples, 0 failures
+Pluralize
+  correctly presents singular form
+  correctly presents default plural form
+  correctly presents plural form for exceptions
 
-Coverage report generated for RSpec to /Users/tansaku/Documents/GitHub/tansaku/webserver_log_parser/coverage. 68 / 68 LOC (100.0%) covered.
+Finished in 0.73058 seconds (files took 0.48907 seconds to load)
+18 examples, 0 failures
+
+Coverage report generated for RSpec to /Users/tansaku/Documents/GitHub/tansaku/webserver_log_parser/coverage. 64 / 64 LOC (100.0%) covered.
 ```
 
 ## Approach
 
 This Webserver Log Parser uses a `WebPageVisits` class to represent the collection of visits to a particular page.  The WebPageVisits class stores the number of visits and unique visits (calculating unique visits by taking the length of a Set version of the array of ips).  By default it sorts on overall number of visits, and provides a parameterized `to_s` method to allow a pretty print output of either the total or unique number of visits to a given page. This relies on a `Pluralize` class to correctly format "visit" vs "visits" although the `to_s` method is no longer used with the table formatted output.
 
-The main class is `WebserverLogParser` which by default will parse a file called `webserver.log` that is assumed to be on the root of the project, although the file parsed can be adjusted by specificing the filename argument to the `parse` class method.  The file is broken up using `readlines` and an index formed using a hash to store  `WebPageVisits` objects that contain the ip visits for each page, keyed against the page name. A `LineParser` class is used to manage the process of splitting the individual lines and creating or updating the `WebPageVisits` objects. The index values are then converted to an array of `WebPageVisits` objects, which can then be sorted by total number or unique number of visits, and reversed to ensure the most visited comes first in the array. 
+The main class is `WebserverLogParser` which by default will parse a file called `webserver.log` that is assumed to be on the root of the project, although the file parsed can be adjusted by specifying the filename argument to the `parse` class method.  The file is broken up by using `read`, splitting on `\n` and an index formed using a hash to store  `WebPageVisits` objects that contain the ip visits for each page, keyed against the page name. A `LineParser` class is used to manage the process of splitting the individual lines and creating or updating the `WebPageVisits` objects. The index values are then converted to an array of `WebPageVisits` objects, which can then be passed to a presenter `WebPageVisitsPresenter` to be sorted by total number or unique number of visits, and reversed to ensure the most visited comes first in the array; as well as formatted into a nice table output via [Terminal Table](https://github.com/tj/terminal-table). 
 
-A `parser.rb` file can be run from the command line and uses [Commander](https://github.com/commander-rb/commander) for command line processing and management and [Terminal Table](https://github.com/tj/terminal-table) to format the results nicely on the terminal.
+The `parser.rb` file can be run from the command line and uses [Commander](https://github.com/commander-rb/commander) for command line processing.
 
 ## Possible Improvements
 
-### Different approach to RSpec organisation?
+### Even Smaller Classes?
 
-The RSpec block for `WebserverLogParser` fell foul of an Rubocop block size issue.  Shared example extraction was not sufficient to remove this issue, and so the advice from the following StackOverflow post was followed to turn off that rule for RSpec blocks:
-
-https://stackoverflow.com/questions/40934345/rubocop-25-line-block-size-and-rspec-tests
-
-The extraction of the shared examples is still in place, but is maybe too convoluted for a test base of this size?  Perhaps it should be reverted to the original approach to increase clarity and ease of use?
-
-### WebserverLog Class?
-
-It might make sense to add an additional class to represent the `WebserverLog` separately but probably premature refactoring given the current level of complexity and specified requirements.  Earlier versions of the  `WebserverLogParser` could be considered to be doing too much in terms of reading the file, and splitting the lines and constructing the main data structure.  Although a counter argument would be that the `WebServerLogParser` class was way below the 100 line limit that Sandi Metz suggests to be the maximum suggested class size.
+Earlier versions of the  `WebserverLogParser` could have been considered to be doing too much in terms of reading the file, and splitting the lines and constructing the main data structure.  Although a counter argument would be that the `WebServerLogParser` class never exceeded the 100 line limit that Sandi Metz suggests to be the maximum suggested class size.
 
 The danger with too many small classes is that it becomes difficult to follow the flow of execution.  However with good tests and test coverage it was straightforward to extract private methods such as the `parse_line` method in the `WebServerLogParser` into a `LineParser` class with "single" responsibility for line parsing.  This does require it to have a reference to the larger data structure it needs to keep track of the aggregate information, which is maybe hinting at the need for another class.  The extraction of the `parse_line` private method to a LineParser method has been included, although this has led to a slight drop in speed performance; it's trade offs all the way.
 
 ### Performance (Speed)?
 
-The system might have to cope with very long webserver logs and the approach taken has not been extensively optimised for either time (speed) or space (memory) performance.  The focus was on getting something that would work robustly.  Performance improvements could come from different data structures used to manage the data as it accumulates.  At least for the current code the visits map is created once and then sorting is performed on that.  The results of the sorting could be memoized, but that feels like premature optimization in the absence of specific performance requirements.
+The system might have to cope with very long webserver logs and the approach taken has not been extensively optimised for either time (speed) or space (memory) performance.  The focus was on getting something that would work robustly with good test coverage.  Performance improvements might come from different data structures used to manage the data as it accumulates.  At least for the current code the visits map is created once and then sorting is performed on that.  The results of the sorting could be memoized, but that feels like premature optimization in the absence of specific performance requirements.
 
-No performance requirements were specified, but a speed performance assessment framework has been added and can be executed as follows:
+No performance requirements were given in the specification for this work, but a speed performance assessment framework has been added and can be executed as follows:
 
 ```
 $ bundle exec rake performance
@@ -214,6 +207,20 @@ unique:   2.740700   0.096164   2.836864 (  2.840105)
 ```
 
 showing improvement in the speed with which we could generate the page views. Repeated runs suggest that the slight deterioration of the unique views was within the range of natural variation between performance assessment runs.
+
+There's a good stack overflow post on the relative peformance of reading files in ruby:
+
+https://stackoverflow.com/a/12412543
+
+which indicates that `read.split` can be more performant than `readlines` but there is no noticeable performance improvement for this project by switching to `read.split` on the size of files used.
+
+https://stackoverflow.com/a/14655895
+
+Suggests using `each_line` but that also does not improve performance.  There's also:
+
+https://felipeelias.github.io/ruby/2017/01/02/fast-file-processing-ruby.html
+
+which suggests `File.open(filename,'r')`, but that also does not lead to any improvement (or `IO.foreach`?).  It seems that to see these differences we would need to assess performance with a much larger file.  The kaggle.txt file shows no significant timing differences, but kaggle.txt is only 470Kb, so likely we need a multiple megabyte file to show any difference.  We could search for one or construct one by having it repeat internally 10 or 100 times ... 
 
 ### Performance (Memory)?
 
@@ -254,13 +261,9 @@ allocated objects by class
 
 Should memory be constrained it is a straightforward matter to compare alternate implementations in terms of their memory usage.  There is no need to instantiate as many objects as the current implementation does, but there's a trade off between code maintainabilty/readability and optimizing for one kind of performance or another.  In the absence of specific requirements it makes sense to leave the code in a more readable/maintainable state, rather than using lots of class methods to avoid instantiating extra objects, such as the LineParser. 
 
-### Acceptance Tests?
+### Use of `send` in `web_page_visits_presenter.rb`
 
-Currently there is a fair bit of code in `parser.rb` that is not covered by any tests.  With more time it might make sense to add an acceptance test to cover this code, and it's behaviour.
-
-### Use of `send` in `parser.rb`
-
-In order to mimimize method length in `parser.rb` the `send` method is used as part of a generic `output_table` method which is perhaps not ideal.  It might be better to pass a block rather then using `send` which could access private methods ... 
+In order to mimimize method length in `web_page_visits_presenter.rb` the `send` method is used as part of a generic `output_table` method which is perhaps not ideal.  It might be better to pass a block rather then using `send` which could access private methods ... 
 
 ### Log Formatting Requirements?
 
@@ -270,7 +273,6 @@ The first version of the code assumed a single space separating the path and ip 
 SEPARATOR = /\t+|\s+/.freeze
 
 ...
-
   raise 'no space characters or tabs' unless line.match?(SEPARATOR)
 ```
 
@@ -291,10 +293,10 @@ displaying up to top 10 in each category
 +-----------------------------------------------------------------+-------------+
 | Page                                                            | Visits      |
 +-----------------------------------------------------------------+-------------+
-| /login.php                                                      | 3294 visits |
-| /home.php                                                       | 2649 visits |
-| /js/vendor/modernizr-2.8.3.min.js                               | 1417 visits |
-| /                                                               | 862 visits  |
+| /login.php                                                      | 3287 visits |
+| /home.php                                                       | 2642 visits |
+| /js/vendor/modernizr-2.8.3.min.js                               | 1415 visits |
+| /                                                               | 861 visits  |
 | /contestproblem.php?name=RUET%20OJ%20Server%20Testing%20Contest | 467 visits  |
 | /css/normalize.css                                              | 408 visits  |
 | /css/bootstrap.min.css                                          | 404 visits  |
@@ -304,23 +306,24 @@ displaying up to top 10 in each category
 | /js/vendor/jquery-1.12.0.min.js                                 | 387 visits  |
 +-----------------------------------------------------------------+-------------+
 
-+-----------------------------------+----------+
-|            Most unique page views            |
-+-----------------------------------+----------+
-| Page                              | Visits   |
-+-----------------------------------+----------+
-| /pcompile.php                     | 6 visits |
-| /action.php                       | 6 visits |
-| /login.php                        | 6 visits |
-| /logout.php                       | 6 visits |
-| /contestsubmission.php            | 6 visits |
-| /                                 | 6 visits |
-| /process.php                      | 6 visits |
-| /js/vendor/modernizr-2.8.3.min.js | 6 visits |
-| /home.php                         | 6 visits |
-| /archive.php                      | 6 visits |
-| /compile.php                      | 6 visits |
-+-----------------------------------+----------+
++--------------------------------------------------------------+----------+
+|                         Most unique page views                          |
++--------------------------------------------------------------+----------+
+| Page                                                         | Visits   |
++--------------------------------------------------------------+----------+
+| /login.php?value=fail                                        | 5 visits |
+| /contestsubmission.php?id=16                                 | 5 visits |
+| /countdown.php?name=RUET%20OJ%20Server%20Testing%20Contest   | 5 visits |
+| /details.php?id=44                                           | 5 visits |
+| /compiler.php                                                | 5 visits |
+| /allsubmission.php?page=2                                    | 5 visits |
+| /contest.php                                                 | 5 visits |
+| /details.php?id=46                                           | 5 visits |
+| /details.php?id=42                                           | 5 visits |
+| /details.php?id=45                                           | 5 visits |
+| /contestproblem.php?name=RUET%20OJ%20TLE%20Testing%20Contest | 5 visits |
++--------------------------------------------------------------+----------+
+
 
 ```
 
@@ -357,3 +360,22 @@ unique:   3.363575   0.104883   3.468458 (  3.472971)
 ```
 
 Thus demonstrating how we can improve the code by a data driven approach that provides specific evidence for the pros and cons of any particular change.
+
+
+## Global variables?  
+
+The repo includes some constants, such as the logger:
+
+```rb
+LOGGER = Logger.new(STDOUT)
+LOGGER.level = Logger::WARN
+```
+
+and some text elements:
+
+```rb
+SPACE_SEPARATOR = ' '
+TAB_SEPARATOR = "\t"
+```
+
+but otherwise global variables have been avoided.  Some argue that `attr_accessor` is preferable, but I would suggest it is a design smell that you're exposing too much of objects to manipulation. As regards logging, Rails has global logging system.  We could trivially change the logger to be something that's passed to all classes, but that seems overkill for this small project.

@@ -4,11 +4,11 @@ require 'benchmark'
 require './lib/webserver_log_parser'
 
 def page_views
-  WebserverLogParser.parse.most_page_views
+  WebserverLogParser.new.visits.sort.reverse
 end
 
 def unique
-  WebserverLogParser.parse.most_unique_page_views
+  WebserverLogParser.new.visits.sort_by(&:unique_number).reverse
 end
 
 n = 5000

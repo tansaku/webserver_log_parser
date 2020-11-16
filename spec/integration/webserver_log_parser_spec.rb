@@ -7,41 +7,42 @@ describe WebserverLogParser do
   let(:log_entry_two) { '/contact 184.123.665.067' }
   let(:bad_log_entry) { '/contact184.123.665.067' }
 
-  subject(:parser) { described_class.parse }
+  subject(:parser) { described_class.new }
 
   before do
     LOGGER.level = Logger::ERROR
-    allow(File).to receive(:readlines).and_return(log)
+    allow(File).to receive_message_chain(:read, :split).and_return(log)
   end
 
   context 'single log entry' do
     let(:log) { [log_entry_one] }
-    it_behaves_like 'single entry log parser'
+
+    it 'has one visit' do
+      expect(parser.visits.count).to eq 1
+    end
   end
 
   context 'double log entry' do
     let(:log) { [log_entry_one, log_entry_two] }
-    it_behaves_like 'multiple entry log parser'
+
+    it 'has two visits' do
+      expect(parser.visits.count).to eq 2
+    end
   end
 
-  context 'triple log entry' do
+  context 'triple log entry with duplication' do
     let(:log) { [log_entry_one, log_entry_two, log_entry_two] }
-    it_behaves_like 'multiple entry log parser' do
-      let(:contact_num) { 2 }
-    end
 
-    it_behaves_like 'multiple entry log parser' do
-      let(:view_method) { :most_unique_page_views }
-      let(:num_method) { :unique_number }
+    it 'has two visits' do
+      expect(parser.visits.count).to eq 2
     end
   end
 
   context 'bad log entry' do
     let(:log) { [log_entry_one, log_entry_two, log_entry_two, bad_log_entry] }
 
-    it_behaves_like 'multiple entry log parser' do
-      let(:view_method) { :most_unique_page_views }
-      let(:num_method) { :unique_number }
+    it 'is ignored' do
+      expect(parser.visits.count).to eq 2
     end
   end
 end

@@ -42,7 +42,7 @@ describe LineParser do
   context 'lines without spaces or tabs' do
     let(:line) { '/login/1126.318.035.038' }
 
-    it 'log an error and add nothing to the index' do
+    it 'logs an error and adds nothing to the index' do
       expect(logger).to receive(:warn).twice
       line_parser
       expect(index['/login/1']).to be_nil
